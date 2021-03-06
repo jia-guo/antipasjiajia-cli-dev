@@ -6,6 +6,9 @@
   "homepage": "",
   "license": "ISC",
   "main": "lib/core.js",
+  "bin": {
+    "antipasjiajia-cli-dev": "bin/index.js"
+  },
   "directories": {
     "lib": "lib",
     "test": "__tests__"
@@ -18,5 +21,6 @@
   },
   "dependencies": {
     "@antipasjiajia-cli-dev/utils": "^1.0.2"
-  }
+  },
+  "gitHead": "faab9406d26935265d91e06df2adbbf0ed49011c"
 }
