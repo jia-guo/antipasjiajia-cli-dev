@@ -1,6 +1,6 @@
 {
   "name": "@antipasjiajia-cli-dev/core",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "antipasjiajia-cli-dev core",
   "author": "jiaguo <antipasjiajia@gmail.com>",
   "homepage": "",
@@ -17,6 +17,6 @@
     "test": "echo \"Error: run tests from root\" && exit 1"
   },
   "dependencies": {
-    "@antipasjiajia-cli-dev/utils": "^1.0.1"
+    "@antipasjiajia-cli-dev/utils": "^1.0.2"
   }
 }
