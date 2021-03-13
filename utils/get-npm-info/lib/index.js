@@ -25,21 +25,13 @@ async function getNpmVersions(npmName) {
   }
 }
 
-function getGreaterVersions(baseVersion, versions) {
-  // 判断大于等于baseVersion，有很多不同写法
-  return versions
-    .filter((version) => semver.satisfies(version, `^${baseVersion}`))
-    .sort((a, b) => (semver.gt(a, b) ? -1 : 1));
-}
-
-async function getLatestVersion(baseVersion, npmName) {
+async function getLatestVersion(npmName) {
   const versions = await getNpmVersions(npmName);
-  const greaterVersions = getGreaterVersions(baseVersion, versions);
-  if (greaterVersions && greaterVersions.length > 0) {
-    return greaterVersions[0];
+  if (versions && versions.length > 0) {
+    return versions.sort((a, b) => (semver.gt(a, b) ? -1 : 1))[0];
   } else {
     return null;
   }
 }
 
-module.exports = { getNpmInfo, getNpmVersions, getGreaterVersions, getLatestVersion };
+module.exports = { getNpmInfo, getNpmVersions, getLatestVersion };

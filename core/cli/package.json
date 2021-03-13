@@ -20,6 +20,7 @@
     "test": "echo \"Error: run tests from root\" && exit 1"
   },
   "dependencies": {
+    "@antipasjiajia-cli-dev/exec": "file:../exec",
     "@antipasjiajia-cli-dev/get-npm-info": "file:../../utils/get-npm-info",
     "@antipasjiajia-cli-dev/init": "file:../../commands/init",
     "@antipasjiajia-cli-dev/log": "file:../../utils/log",
@@ -27,7 +28,6 @@
     "commander": "^7.1.0",
     "dotenv": "^8.2.0",
     "import-local": "^3.0.2",
-    "minimist": "^1.2.5",
     "npmlog": "^4.1.2",
     "path-exists": "^4.0.0",
     "root-check": "^1.0.0",
