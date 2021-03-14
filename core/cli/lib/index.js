@@ -9,7 +9,6 @@ const commander = require('commander');
 const pkg = require('../package.json');
 const constants = require('./const');
 const log = require('@antipasjiajia-cli-dev/log');
-const init = require('@antipasjiajia-cli-dev/init');
 const exec = require('@antipasjiajia-cli-dev/exec');
 
 const program = new commander.Command();
@@ -70,7 +69,6 @@ function registerCommand() {
 
 async function prepare() {
   checkPkgVersion();
-  checkNodeVersion();
   checkRoot();
   checkUserHome();
   checkEvn();
@@ -79,16 +77,6 @@ async function prepare() {
 
 function checkPkgVersion() {
   log.notice('cli', pkg.version);
-}
-
-function checkNodeVersion() {
-  // get the current version
-  const curVersion = process.version;
-  // check with the required version
-  const reqVersion = constants.LOWEST_NODE_VERSION;
-  if (!semver.gte(curVersion, reqVersion)) {
-    throw new Error(colors.red(`antipasjiajia-cli requires a node version >= ${reqVersion}`));
-  }
 }
 
 function checkRoot() {

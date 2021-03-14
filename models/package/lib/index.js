@@ -17,6 +17,7 @@ class Package {
     if (!isObject(options)) {
       throw new Error('Package options必须是对象');
     }
+
     this.packageName = options.packageName;
     this.packageVersion = options.packageVersion;
 

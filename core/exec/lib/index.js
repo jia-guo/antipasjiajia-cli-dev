@@ -1,6 +1,7 @@
 'use strict';
 
 const path = require('path');
+const cp = require('child_process');
 const Package = require('@antipasjiajia-cli-dev/package');
 const log = require('@antipasjiajia-cli-dev/log');
 
@@ -25,7 +26,7 @@ async function exec(...args) {
   let pkg;
 
   if (!targetPath) {
-    // default缓存路径
+    // 缓存路径
     targetPath = path.resolve(homePath, CACHE_DIR);
     log.verbose('targetPath', targetPath);
     const storePath = path.resolve(targetPath, 'node_modules');
@@ -47,6 +48,7 @@ async function exec(...args) {
       await pkg.install();
     }
   } else {
+    // 本地路径
     log.verbose('targetPath', targetPath);
     pkg = new Package({
       targetPath,
@@ -56,8 +58,52 @@ async function exec(...args) {
   }
 
   const rootFile = pkg.getRootFilePath();
-  console.log('rootFile', rootFile);
-  //   require(rootFile)(...args);
+  if (rootFile) {
+    try {
+      // * 在当前进程中调用
+      // require(rootFile)(...args);
+      // * 在子进程中调用
+      // 参数瘦身
+      const cmd = args.slice(-1)[0];
+      const filteredCmd = Object.create(null);
+      Object.keys(args.slice(-1)[0]).forEach((key) => {
+        if (key.startsWith('_') || key === 'parent') return;
+        filteredCmd[key] = cmd[key];
+      });
+      args[args.length - 1] = filteredCmd;
+
+      // 拼接代码
+      const code = `require('${rootFile}')(...${JSON.stringify(args)})`;
+
+      // 将子进程与父进程绑定，子进程输出流直接输入到主进程中（i.e. 打印合体）
+      const child = spawn('node', ['-e', code], {
+        cwd: process.cwd(),
+        stdio: 'inherit' // 默认 'pipe'
+      });
+
+      // 监听
+      child.on('error', (e) => {
+        log.error(e.message);
+        process.exit(1);
+      });
+      child.on('exit', (e) => {
+        log.verbose('命令执行成功: ' + e);
+        process.exit(e);
+      });
+    } catch (e) {
+      log.error(e.message);
+    }
+  }
+}
+
+// 操作系统兼容
+function spawn(command, args, options = {}) {
+  const isWin32 = process.platform === 'win32';
+
+  const cmd = isWin32 ? 'cmd' : command;
+  const cmdArgs = isWin32 ? ['/c'].concat(command, args) : args;
+
+  return cp.spawn(cmd, cmdArgs, options);
 }
 
 module.exports = exec;

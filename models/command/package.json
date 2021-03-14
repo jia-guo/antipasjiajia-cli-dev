@@ -1,7 +1,7 @@
 {
-  "name": "@antipasjiajia-cli-dev/init",
+  "name": "command",
   "version": "1.0.3",
-  "description": "antipasjiajia-cli-dev init command",
+  "description": "Command base class",
   "author": "jiaguo <antipasjiajia@gmail.com>",
   "homepage": "https://github.com/jia-guo/antipasjiajia-cli-dev#readme",
   "license": "ISC",
@@ -13,9 +13,6 @@
   "files": [
     "lib"
   ],
-  "publishConfig": {
-    "access": "public"
-  },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/jia-guo/antipasjiajia-cli-dev.git"
@@ -27,7 +24,8 @@
     "url": "https://github.com/jia-guo/antipasjiajia-cli-dev/issues"
   },
   "dependencies": {
-    "@antipasjiajia-cli-dev/command": "file:../../models/command",
-    "@antipasjiajia-cli-dev/log": "file:../../utils/log"
+    "@antipasjiajia-cli-dev/log": "file:../../utils/log",
+    "colors": "^1.4.0",
+    "semver": "^7.3.4"
   }
 }
