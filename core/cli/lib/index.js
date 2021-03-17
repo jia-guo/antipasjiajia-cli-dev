@@ -58,6 +58,7 @@ function registerCommand() {
   });
 
   program.parse(process.argv);
+
   // 先进行参数解析，利用解析的结果判断有没有传入命令（光传option也命中）
   if (!program.args || program.args.length < 1) {
     // 未传参数，打印帮助文档

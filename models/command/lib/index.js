@@ -13,7 +13,7 @@ class Command {
     }
     this._argv = args;
 
-    let runner = new Promise((resolve, reject) => {
+    Promise((resolve, reject) => {
       let chain = Promise.resolve();
       chain = chain.then(() => this.checkNodeVersion());
       chain = chain.then(() => this.initArgs());
@@ -25,7 +25,7 @@ class Command {
     });
   }
 
-  // 参数解析
+  // 参数初步解析
   initArgs() {
     this._cmd = this._argv.slice(-1)[0];
     this._argv = this._argv.slice(0, -1);

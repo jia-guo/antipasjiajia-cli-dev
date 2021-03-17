@@ -28,6 +28,14 @@
   },
   "dependencies": {
     "@antipasjiajia-cli-dev/command": "file:../../models/command",
-    "@antipasjiajia-cli-dev/log": "file:../../utils/log"
+    "@antipasjiajia-cli-dev/log": "file:../../utils/log",
+    "@antipasjiajia-cli-dev/package": "file:../../models/package",
+    "@antipasjiajia-cli-dev/request": "file:../../utils/request",
+    "@antipasjiajia-cli-dev/utils": "file:../../utils/utils",
+    "fs-extra": "^9.1.0",
+    "inquirer": "^8.0.0",
+    "ora": "^5.3.0",
+    "semver": "^7.3.4",
+    "user-home": "^2.0.0"
   }
 }

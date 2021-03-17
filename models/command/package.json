@@ -1,5 +1,5 @@
 {
-  "name": "command",
+  "name": "@antipasjiajia-cli-dev/command",
   "version": "1.0.3",
   "description": "Command base class",
   "author": "jiaguo <antipasjiajia@gmail.com>",

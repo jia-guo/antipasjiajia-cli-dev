@@ -1,5 +1,5 @@
 {
-  "name": "@antipasjiajia-cli-dev/format-path",
+  "name": "@antipasjiajia-cli-dev/request",
   "version": "1.0.3",
   "description": "> TODO: description",
   "author": "jiaguo <antipasjiajia@gmail.com>",
@@ -22,5 +22,8 @@
   },
   "bugs": {
     "url": "https://github.com/jia-guo/antipasjiajia-cli-dev/issues"
+  },
+  "dependencies": {
+    "axios": "^0.21.1"
   }
 }
