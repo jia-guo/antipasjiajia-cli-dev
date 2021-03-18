@@ -32,8 +32,11 @@
     "@antipasjiajia-cli-dev/package": "file:../../models/package",
     "@antipasjiajia-cli-dev/request": "file:../../utils/request",
     "@antipasjiajia-cli-dev/utils": "file:../../utils/utils",
+    "ejs": "^3.1.6",
     "fs-extra": "^9.1.0",
+    "glob": "^7.1.6",
     "inquirer": "^8.0.0",
+    "kebab-case": "^1.0.1",
     "ora": "^5.3.0",
     "semver": "^7.3.4",
     "user-home": "^2.0.0"

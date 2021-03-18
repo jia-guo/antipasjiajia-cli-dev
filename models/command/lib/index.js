@@ -13,7 +13,7 @@ class Command {
     }
     this._argv = args;
 
-    Promise((resolve, reject) => {
+    new Promise((resolve, reject) => {
       let chain = Promise.resolve();
       chain = chain.then(() => this.checkNodeVersion());
       chain = chain.then(() => this.initArgs());

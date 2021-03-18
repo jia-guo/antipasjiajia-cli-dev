@@ -23,7 +23,7 @@ class Package {
 
     // 本地package路径
     this.targetPath = options.targetPath;
-    // 缓存package的路径
+    // 缓存package的路径 (优先于targetPath)
     this.storePath = options.storePath;
     // package的缓存目录前缀
     this.cacheFilePathPrefix = this.packageName.replace('/', '_');

@@ -6,15 +6,20 @@ const fse = require('fs-extra');
 const inquirer = require('inquirer');
 const semver = require('semver');
 const ora = require('ora');
+const ejs = require('ejs');
 const Command = require('@antipasjiajia-cli-dev/command');
 const log = require('@antipasjiajia-cli-dev/log');
 const Package = require('@antipasjiajia-cli-dev/package');
-const { sleep, sleepAsync } = require('@antipasjiajia-cli-dev/utils');
+const { sleep, sleepAsync, spawnAsync } = require('@antipasjiajia-cli-dev/utils');
 
 const getProjectTemplate = require('./getProjectTemplate');
 
 const TYPE_PROJECT = 'project';
 const TYPE_COMPONENCT = 'component';
+const TEMPLATE_TYPE_NORMAL = 'normal';
+const TEMPLATE_TYPE_CUSTOM = 'custom';
+
+const WHITE_COMMANDS = ['npm', 'yarn'];
 
 class InitCommand extends Command {
   // 每一个command的具体参数不同
@@ -28,18 +33,147 @@ class InitCommand extends Command {
   // 具体业务逻辑
   async exec() {
     try {
-      // 1. 准备阶段 - 取得项目基本信息
+      // 1. 准备阶段
+      // 请求模板数据
+      // 准备缓存目录
+      // 取得项目基本信息
       await this.prepare();
+      // 检查判断项目信息
       log.verbose('project info', this.projectInfo);
-      if (Object.keys(this.projectInfo).length === 0) {
+      if (
+        !this.projectInfo ||
+        Object.keys(this.projectInfo).length === 0 ||
+        !this.projectInfo.projectTemplate
+      ) {
         throw new Error('项目信息不完整');
       }
       // 2. 下载模板
       await this.downloadTemplate();
       // 3. 安装模板
+      await this.installTemplate();
     } catch (e) {
       log.error(e.message);
     }
+  }
+
+  async installTemplate() {
+    const { type = TEMPLATE_TYPE_NORMAL } = this.projectInfo.projectTemplate;
+    if (type === TEMPLATE_TYPE_NORMAL) {
+      await this.installNormalTemplate();
+    } else if (type === TEMPLATE_TYPE_CUSTOM) {
+      await this.installCustomTemplate();
+    } else {
+      throw new Error('项目模板类型不存在');
+    }
+  }
+
+  async installNormalTemplate() {
+    // 1. 拷贝模板至当前目录
+    this.copyTemplateToCurrentDir();
+
+    // 2. ejs组装package.json
+    await this.ejsRender();
+
+    const { installCommand, startCommand } = this.projectInfo.projectTemplate;
+
+    // 3. 依赖安装
+    if (!installCommand) return;
+    await this.installDependencies(installCommand);
+
+    // 4. 启动命令执行
+    if (!startCommand) return;
+    await this.startTheProject(startCommand);
+  }
+
+  async installCustomTemplate() {}
+
+  copyTemplateToCurrentDir() {
+    const spinner = ora({ text: `正在安装模板至当前目录`, spinner: 'monkey' }).start();
+    // 获取from to目录的绝对路径
+    const templatePath = path.resolve(this.templatePkg.cacheFilePath, './template');
+    const currentPath = path.resolve('.');
+    // 确保路径存在（若不存在，会进行创建）
+    fse.ensureDirSync(templatePath);
+    fse.ensureDirSync(currentPath);
+    // 拷贝
+    fse.copySync(templatePath, currentPath);
+    spinner.succeed(`模板安装成功`);
+  }
+
+  async ejsRender() {
+    const baseDir = process.cwd();
+    const tmplData = { ...this.projectInfo, version: this.projectInfo.projectVersion };
+    return new Promise((resolve, reject) => {
+      require('glob')(
+        '**',
+        {
+          cwd: baseDir,
+          ignore: ['node_modules/**', 'public/**'],
+          nodir: true
+        },
+        (err, files) => {
+          if (err) reject(err);
+          Promise.all(
+            files.map((fileName) => {
+              const filePath = path.join(baseDir, fileName);
+              return new Promise((resolve, reject) => {
+                ejs.renderFile(filePath, tmplData, {}, (err, result) => {
+                  if (err) reject(err);
+                  fse.writeFileSync(filePath, result);
+                  resolve();
+                });
+              });
+            })
+          )
+            .then(() => {
+              resolve();
+            })
+            .catch((err) => reject(err));
+        }
+      );
+    });
+  }
+
+  async installDependencies(installCommand) {
+    const [cmd, ...args] = installCommand.split(' ');
+    if (!this.isCmdAllowed(cmd, WHITE_COMMANDS)) {
+      log.info(`非法命令：${cmd}`);
+      return;
+    }
+    log.info('正在安装依赖');
+    const result = await spawnAsync(cmd, args, {
+      // 子进程输出流绑定到当前
+      stdio: 'inherit',
+      cwd: process.cwd()
+    });
+    if (result === 0) {
+      log.info('依赖安装成功');
+    } else {
+      log.error('依赖安装失败');
+    }
+  }
+
+  async startTheProject(startCommand) {
+    const [cmd, ...args] = startCommand.split(' ');
+    if (!this.isCmdAllowed(cmd, WHITE_COMMANDS)) {
+      log.info(`非法命令：${cmd}`);
+      return;
+    }
+    log.info('正在启动项目');
+    const result = await spawnAsync(cmd, args, {
+      // 子进程输出流绑定到当前
+      stdio: 'inherit',
+      cwd: process.cwd()
+    });
+    if (result === 0) {
+      log.info('启动项目成功');
+    } else {
+      log.error('启动项目失败');
+    }
+  }
+
+  isCmdAllowed(cmd, whiteList) {
+    return whiteList.includes(cmd);
   }
 
   async downloadTemplate() {
@@ -48,8 +182,9 @@ class InitCommand extends Command {
     // 1.2 通过npm项目存储项目模板
     // 1.3 将项目信息存储到MongoDB中
     // 1.4 egg.js后端获取MongoDB中的数据，通过API返回
+    // 2. 下载/更新至缓存目录的template/node_modules文件夹下
     const {
-      projectTemplate: { packageName, packageVersion }
+      projectTemplate: { npmName: packageName, version: packageVersion }
     } = this.projectInfo;
     const targetPath = path.resolve(process.env.CLI_HOME_PATH, 'template');
     const storePath = path.resolve(targetPath, 'node_modules');
@@ -70,7 +205,7 @@ class InitCommand extends Command {
     const feedback = mode === 'install' ? '下载' : '更新';
     const action = mode === 'install' ? 'install' : 'update';
     const spinner = ora({ text: `正在${feedback}模板`, spinner: 'monkey' }).start();
-    await sleepAsync(2000);
+    // await sleepAsync(200);
     try {
       await this.templatePkg[action]();
       spinner.succeed(`模板${feedback}成功，版本号${this.templatePkg.packageVersion}`);
@@ -81,7 +216,7 @@ class InitCommand extends Command {
   }
 
   async prepare() {
-    // 0. 判断项目模板是否存在
+    // 0. fetch模板数据 判断是否有数据
     this.projectTemplates = await getProjectTemplate();
     if (!this.projectTemplates || this.projectTemplates.length === 0) {
       throw new Error('项目模板不存在');
@@ -123,7 +258,9 @@ class InitCommand extends Command {
       });
       // 清空当前目录中的所有内容
       if (confirmDelete) {
+        const spinner = ora({ text: `正在清空目录`, spinner: 'monkey' }).start();
         fse.emptyDirSync(localPath);
+        spinner.succeed('清空目录成功');
       }
     }
 
@@ -153,7 +290,7 @@ class InitCommand extends Command {
           type: 'input',
           name: 'projectName',
           message: '请输入项目名称',
-          default: '',
+          default: this.projectName,
           validate: function (v) {
             const done = this.async();
             setTimeout(() => {
@@ -189,19 +326,18 @@ class InitCommand extends Command {
           name: 'projectTemplate',
           message: '请选择项目模板',
           choices: this.projectTemplates.map((tmpl) => ({
-            value: `${tmpl.npmName}@${tmpl.version}`,
+            value: tmpl,
             name: tmpl.name
-          })),
-          filter: (v) => {
-            const [packageName, packageVersion] = v.split('@');
-            return { packageName, packageVersion };
-          }
+          }))
         }
       ]);
-      projectInfo = { ...projectInfo, ...project };
+      projectInfo = {
+        ...projectInfo,
+        ...project,
+        packageName: require('kebab-case')(project.projectName).replace(/^-/, '')
+      };
     } else {
     }
-
     return projectInfo;
   }
 

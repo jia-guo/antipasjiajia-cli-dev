@@ -1,9 +1,9 @@
 'use strict';
 
 const path = require('path');
-const cp = require('child_process');
 const Package = require('@antipasjiajia-cli-dev/package');
 const log = require('@antipasjiajia-cli-dev/log');
+const { spawn } = require('@antipasjiajia-cli-dev/utils');
 
 // cmd -> package name
 const SETTINGS = {
@@ -21,7 +21,7 @@ async function exec(...args) {
   log.verbose('homePath', homePath);
   let targetPath = process.env.CLI_TARGET_PATH;
   const packageName = SETTINGS[args.slice(-1)[0].name()];
-  const packageVersion = '1.1.0';
+  const packageVersion = 'latest';
 
   let pkg;
 
@@ -94,16 +94,6 @@ async function exec(...args) {
       log.error(e.message);
     }
   }
-}
-
-// 操作系统兼容
-function spawn(command, args, options = {}) {
-  const isWin32 = process.platform === 'win32';
-
-  const cmd = isWin32 ? 'cmd' : command;
-  const cmdArgs = isWin32 ? ['/c'].concat(command, args) : args;
-
-  return cp.spawn(cmd, cmdArgs, options);
 }
 
 module.exports = exec;
