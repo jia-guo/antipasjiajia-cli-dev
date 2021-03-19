@@ -12,7 +12,7 @@ const log = require('@antipasjiajia-cli-dev/log');
 const Package = require('@antipasjiajia-cli-dev/package');
 const { sleep, sleepAsync, spawnAsync } = require('@antipasjiajia-cli-dev/utils');
 
-const getProjectTemplate = require('./getProjectTemplate');
+const fetchTemplates = require('./fetchTemplatesFromNpm');
 
 const TYPE_PROJECT = 'project';
 const TYPE_COMPONENCT = 'component';
@@ -85,7 +85,9 @@ class InitCommand extends Command {
     await this.startTheProject(startCommand);
   }
 
-  async installCustomTemplate() {}
+  async installCustomTemplate() {
+    // 自定义模板：pkg指定位置有install函数，取得之后开cp，require('...')(传data)
+  }
 
   copyTemplateToCurrentDir() {
     const spinner = ora({ text: `正在安装模板至当前目录`, spinner: 'monkey' }).start();
@@ -108,7 +110,7 @@ class InitCommand extends Command {
         '**',
         {
           cwd: baseDir,
-          ignore: ['node_modules/**', 'public/**'],
+          ignore: ['**/node_modules/**', '**/public/**'],
           nodir: true
         },
         (err, files) => {
@@ -217,15 +219,25 @@ class InitCommand extends Command {
 
   async prepare() {
     // 0. fetch模板数据 判断是否有数据
-    this.projectTemplates = await getProjectTemplate();
-    if (!this.projectTemplates || this.projectTemplates.length === 0) {
-      throw new Error('项目模板不存在');
+    const npmTemplates = await fetchTemplates();
+    if (!npmTemplates || npmTemplates.length === 0) {
+      throw new Error('模板不存在');
     }
+    [this.projectTemplates, this.componentTemplates] = npmTemplates.reduce(
+      (acc, tmpl) => {
+        if (tmpl.tag.includes('project')) acc[0].push(tmpl);
+        if (tmpl.tag.includes('component')) acc[1].push(tmpl);
+        return acc;
+      },
+      [[], []]
+    );
+
     // 1. 判断当前目录是否为空
     // 2. 是否启动强制更新 --force
     // 返回isReady - 标记是否bail out
     const isReady = await this.prepareDir();
     if (!isReady) return null;
+
     // 3. 选择创建项目/组件
     // 4. 获取项目的基本信息
     // 取得项目信息
@@ -283,44 +295,50 @@ class InitCommand extends Command {
     });
     projectInfo.type = type;
 
-    // 4. 获取项目的基本信息
-    if (type === TYPE_PROJECT) {
-      const project = await inquirer.prompt([
-        {
-          type: 'input',
-          name: 'projectName',
-          message: '请输入项目名称',
-          default: this.projectName,
-          validate: function (v) {
-            const done = this.async();
-            setTimeout(() => {
-              if (!/^[a-zA-Z]+[\w-]*[a-zA-Z0-9]$/.test(v)) {
-                done('请输入合法的项目名称');
-                return;
-              }
-              done(null, true);
-            }, 0);
-          },
-          filter: (v) => v
+    // 4. 获取基本信息
+    const basicInfo = await inquirer.prompt([
+      {
+        type: 'input',
+        name: 'projectName',
+        message: '请输入项目名称',
+        default: this.projectName,
+        validate: function (v) {
+          const done = this.async();
+          setTimeout(() => {
+            if (!/^[a-zA-Z]+[\w-]*[a-zA-Z0-9]$/.test(v)) {
+              done('请输入合法的项目名称');
+              return;
+            }
+            done(null, true);
+          }, 0);
         },
-        {
-          type: 'input',
-          name: 'projectVersion',
-          message: '请输入项目版本号',
-          default: '1.0.0',
-          validate: function (v) {
-            const done = this.async();
+        filter: (v) => v
+      },
+      {
+        type: 'input',
+        name: 'projectVersion',
+        message: '请输入项目版本号',
+        default: '1.0.0',
+        validate: function (v) {
+          const done = this.async();
 
-            setTimeout(() => {
-              if (!semver.valid(v)) {
-                done('请输入合法的版本号');
-                return;
-              }
-              done(null, true);
-            }, 0);
-          },
-          filter: (v) => (!!semver.valid(v) ? semver.valid(v) : v)
+          setTimeout(() => {
+            if (!semver.valid(v)) {
+              done('请输入合法的版本号');
+              return;
+            }
+            done(null, true);
+          }, 0);
         },
+        filter: (v) => (!!semver.valid(v) ? semver.valid(v) : v)
+      }
+    ]);
+
+    // 5. 选择项目/组件
+    let templateInfo = {};
+    if (type === TYPE_PROJECT) {
+      // 项目模板
+      templateInfo = await inquirer.prompt([
         {
           type: 'list',
           name: 'projectTemplate',
@@ -331,13 +349,43 @@ class InitCommand extends Command {
           }))
         }
       ]);
-      projectInfo = {
-        ...projectInfo,
-        ...project,
-        packageName: require('kebab-case')(project.projectName).replace(/^-/, '')
-      };
     } else {
+      // 组件模板
+      templateInfo = await inquirer.prompt([
+        {
+          type: 'list',
+          name: 'componentTemplate',
+          message: '请选择组件模板',
+          choices: this.componentTemplates.map((tmpl) => ({
+            value: tmpl,
+            name: tmpl.name
+          }))
+        },
+        {
+          type: 'input',
+          name: 'componentDescription',
+          message: '请输入组件描述信息',
+          validate: function (v) {
+            const done = this.async();
+            setTimeout(() => {
+              if (!semver.valid(v)) {
+                done('组件描述信息不能为空');
+                return;
+              }
+              done(null, true);
+            }, 0);
+          }
+        }
+      ]);
     }
+
+    projectInfo = {
+      ...projectInfo,
+      ...basicInfo,
+      ...templateInfo,
+      packageName: require('kebab-case')(project.projectName).replace(/^-/, '')
+    };
+
     return projectInfo;
   }
 
